@@ -1,0 +1,327 @@
+<!doctype html>
+<html>
+<head>
+<title>
+src/parser.rkt
+</title>
+<style>
+
+html {
+  height: 100%;
+}
+
+body {
+  font-size: 14px;
+  line-height: 18px;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+#container {
+  min-height: 100%;
+  position: relative;
+}
+
+#background {
+  background: #fff;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 350px;
+  border-right: 1px solid #e5e5ee;
+  z-index: -1;
+}
+
+ul {
+  list-style: outside none none;
+  padding: 0 0 5px 0;
+  margin: 0;
+}
+
+li {
+  white-space: nowrap;
+}
+
+div {
+  display: inline-block;
+box-sizing: border-box;
+}
+
+pre {
+  font-size: 12px;
+  line-height: 16px;
+  font-family: Menlo, Monaco, Consolas, "Lucida Console", monospace;
+  margin: 0;
+  padding: 0;
+}
+
+.annotation {
+  max-width: 350px;
+  min-width: 350px;
+  min-height: 5px;
+  padding: 13px;
+  overflow-x: hidden;
+  white-space: normal;
+  text-align: left;
+  vertical-align: top;
+}
+
+.content {
+  padding: 13px;
+  vertical-align: top;
+  border: none;
+}
+
+
+
+
+body {
+background-color: black;
+color: #ccc;
+}
+
+#background {
+background-color: #222;
+}
+
+.annotation {
+color: #eee;
+}
+
+.content {
+
+}
+
+</style>
+<script>
+
+</script>
+</head>
+<body>
+<div id="container">
+<div id="background"></div>
+<li>
+<div class="annotation">
+<h1>
+src/parser.rkt
+</h1>
+</div>
+</li>
+<li><div class='annotation'></div><div class='content'><pre>
+#lang racket/base
+
+(require racket/string
+         racket/cmdline
+         "utils.rkt"
+         "languages.rkt"
+         "html.rkt")
+
+(provide main)
+
+
+
+</pre></div></li>
+<li><div class='annotation'>
+<p>
+Program constants
+</p>
+</div><div class='content'><pre>
+(define PROGRAM-NAME     "raco annotate")
+(define JS-FILENAME          "script.js")
+(define CSS-FILENAME         "style.css")
+
+
+</pre></div></li>
+<li><div class='annotation'>
+<p>
+Program command line options
+</p>
+</div><div class='content'><pre>
+(define inline-cssjs         (make-parameter           #f))
+(define verbosity-mode       (make-parameter           #f))
+(define output-base-folder   (make-parameter       "docs"))
+
+
+</pre></div></li>
+<li><div class='annotation'>
+<p>
+parser parameters for rendering html and other things
+</p>
+</div><div class='content'><pre>
+(define section-number       (make-parameter            0))
+(define code-accum           (make-parameter           ""))
+(define inside-section?      (make-parameter           #f))
+(define inside-annotation?   (make-parameter           #f))
+(define multi-comment?       (make-parameter           #f))
+(define file-title-name      (make-parameter  "file.html"))
+
+
+
+</pre></div></li>
+<li><div class='annotation'>
+<p>
+return a path based on the target folder and filename
+</p>
+</div><div class='content'><pre>
+(define (build-file-path output filename)
+  (define-values (dir fname d?) (split-path filename))
+  (build-path (current-directory)
+              output
+              (string-append (path-&gt;string fname) ".html")))
+
+
+
+</pre></div></li>
+<li><div class='annotation'>
+<p>
+add code to the code accumulator
+</p>
+</div><div class='content'><pre>
+(define (add-code line output)
+  (unless (inside-section?)
+    (inside-section? #t)
+    (displayln "&lt;li&gt;&lt;div class='annotation'&gt;&lt;/div&gt;&lt;div class='content'&gt;&lt;pre&gt;" output))
+
+  (when (inside-annotation?)
+    (displayln "&lt;/div&gt;&lt;div class='content'&gt;&lt;pre&gt;" output)
+    (inside-annotation? #f))
+  (code-accum (string-append (code-accum) line "\n")))
+
+
+
+</pre></div></li>
+<li><div class='annotation'>
+<p>
+write code to the file from the accumulator
+</p>
+</div><div class='content'><pre>
+(define (write-code output)
+  (unless (string=? "" (code-accum))
+    (displayln (code-accum) output)
+    (code-accum "")
+    (displayln "&lt;/pre&gt;&lt;/div&gt;&lt;/li&gt;" output)
+    (inside-section? #f)))
+
+
+
+</pre></div></li>
+<li><div class='annotation'>
+<p>
+writing code lines goes here
+</p>
+</div><div class='content'><pre>
+(define (write-comment-line line output)
+
+  (write-code output) ; flush any code and close a section
+
+  (unless (inside-section?)
+    (inside-section? #t)
+    (inside-annotation? #t)
+    (displayln "&lt;li&gt;&lt;div class='annotation'&gt;" output))
+
+  (displayln "&lt;p&gt;"  output)
+  (displayln line   output)
+  (displayln "&lt;/p&gt;" output))
+
+
+
+</pre></div></li>
+<li><div class='annotation'>
+<p>
+Line read logic goes here
+</p>
+<p>
+Determine if the line is a comment or not, and insert based on that
+</p>
+</div><div class='content'><pre>
+(define (parse-line line output-port slc)
+  (define sanitized-line (sanitize-line line))
+  (define trimmed-line (trim-line sanitized-line))
+  (if (string-startswith? trimmed-line slc)
+      (write-comment-line (remove-comment trimmed-line slc) output-port)
+      (add-code sanitized-line output-port)))
+
+
+
+</pre></div></li>
+<li><div class='annotation'>
+<p>
+build a parser using a syntax rules struct
+</p>
+</div><div class='content'><pre>
+(define (parse-file filename syntaxer)
+  
+  (define fr (file-reader (string-&gt;path filename)))
+  (define op (open-output-file
+              (build-file-path (output-base-folder) filename) #:exists 'replace))
+  
+  (write-lines-to-file op (generate-html-header filename base-css css-dark-theme ""))
+  
+  (define (parse-all-lines generator)
+    (define line (generator))
+    (unless (eof-object? line)
+      (parse-line line op (highlighter-slc syntaxer))
+      (parse-all-lines generator)))
+  
+  (parse-all-lines fr)
+  
+  (write-code op)
+
+  (write-lines-to-file op (generate-html-footer))
+  
+  (displayln "File successfully parsed"))
+
+
+
+</pre></div></li>
+<li><div class='annotation'>
+<p>
+Create a new file and find it's highlighter
+</p>
+<p>
+If no highlighter exists, quit the program
+</p>
+</div><div class='content'><pre>
+(define (create-docs filename)
+  (define extension (get-extension filename))
+  
+  (unless (hash-has-key? all-languages (get-extension filename))
+    (displayln "Not supported!")
+    (exit 0))
+
+  (define selected (car (hash-ref all-languages extension)))
+  (define lang     (car selected))
+  (define syntaxer (car (cdr selected)))
+
+  (when (verbosity-mode)
+    (displayln (format "File given: ~a"    filename))
+    (displayln (format "Extension: ~a"     extension))
+    (displayln (format "Output folder: ~a" (output-base-folder)))
+    (displayln (format "Language: ~a"      lang)))
+
+  (parse-file filename syntaxer)
+  (displayln "Done"))
+
+
+(define (main)
+  (command-line
+   #:program PROGRAM-NAME
+   #:once-each
+   [("-v" "--verbose") "Enable more text at runtime" (verbosity-mode #t)]
+   [("-o" "--output")
+    output-dir
+    "Destination folder to save docs to" (output-base-folder output-dir)]
+
+   [("--print-languages") "Print supported languages" (print-supported-languages) (exit 0)]
+
+   #:args (filename)
+   (create-docs filename)
+   ))
+
+</pre></div></li>
+</ul>
+</div>
+<footer>Created by Racko</footer>
+</body>
+</html>
