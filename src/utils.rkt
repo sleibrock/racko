@@ -3,7 +3,10 @@
 #|
 Racko utilities
 
-
+Contains:
+  * string functions
+  * regex functions
+  * file reading utilities and file pathing
 |#
 
 ; Load required libs
@@ -20,10 +23,13 @@ Racko utilities
          trim-line
          sanitize-line
          remove-comment
-         string-startswith?)
+         string-startswith?
+         regexp-contains?
+         regexp-replace-pair
+         get-file-from-path) 
 
 
-; Create a lazy file reader that returns a line each time it is called
+; Create a file reader that returns a line each time it is called
 ; This is used to lazily read a file instead of reading all lines at once
 (define (file-reader filename)
   (define p (open-input-file filename))
@@ -39,10 +45,7 @@ Racko utilities
 
 ; Return a function that will write lines to a given output port
 (define (write-lines-to-file output-port lines)
-  (for-each
-   (λ (l)
-     (displayln l output-port))
-   lines))
+  (for-each (λ (l) (displayln l output-port)) lines))
 
 
 ; Trim a line so there's no whitespace at the left side
@@ -51,8 +54,11 @@ Racko utilities
 
 
 ; Sanitize a line of any HTML codes
+; Should also replace any tab lines with spaces fully
 (define (sanitize-line line)
-  (regexp-replaces line '([#rx"<" "\\&lt;"] [#rx">" "\\&gt;"])))
+  (regexp-replaces line '([#rx"\t"  "    "]
+                          [#rx"<" "\\&lt;"]
+                          [#rx">" "\\&gt;"])))
 
 
 ; Remove a single-line comment pattern from the input string
@@ -67,6 +73,24 @@ Racko utilities
   (if (< (string-length string-a) (string-length string-b))
       #f
       (string=? string-b (substring string-a 0 (string-length string-b)))))
+
+
+; Determine if string A exists in B (using regexp-match)
+(define (regexp-contains? ra b)
+  (not (eq? #f (regexp-match ra b))))
+
+
+; Regexp replace with a pair on a string
+; The pair should be '(#rx str)
+(define (regexp-replace-pair str pair)
+  (regexp-replace (car pair) str (car (cdr pair))))
+
+
+; Retrieve the file from a given path
+(define (get-file-from-path p)
+  (define-values (fullpath filename isdir?) (split-path p))
+  (values filename))
+
 
 (module+ test
   (displayln "Tests go here"))

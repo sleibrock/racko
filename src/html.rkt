@@ -136,4 +136,8 @@ color: #eee;
 .content {
 
 }
+
+.comment {
+  color: green;
+}
 ")

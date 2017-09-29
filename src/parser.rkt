@@ -1,5 +1,16 @@
 #lang racket/base
 
+#|
+The main parsing logic program
+
+Contains all logic and functions related to HTML
+annotation file creation.
+
+The program relies heavily on parameters for the
+time being. Threading this program safely is
+not quite there yet.
+|#
+
 (require racket/string
          racket/cmdline
          "utils.rkt"
@@ -27,6 +38,9 @@
 (define multi-comment?       (make-parameter           #f))
 (define file-title-name      (make-parameter  "file.html"))
 
+(define line-num             (make-parameter            1))
+(define current-line         (make-parameter           ""))
+
 
 ; return a path based on the target folder and filename
 (define (build-file-path output filename)
@@ -37,7 +51,9 @@
 
 
 ; add code to the code accumulator
-(define (add-code line output)
+(define (add-code line hl output)
+  (current-line line)
+  
   (unless (inside-section?)
     (inside-section? #t)
     (displayln "<li><div class='annotation'></div><div class='content'><pre>" output))
@@ -45,7 +61,21 @@
   (when (inside-annotation?)
     (displayln "</div><div class='content'><pre>" output)
     (inside-annotation? #f))
-  (code-accum (string-append (code-accum) line "\n")))
+
+  (unless (multi-comment?)
+    (when (regexp-contains? (car (highlighter-mlcb hl)) (current-line))
+      (multi-comment? #t)
+      (displayln (format "Found a multi line comment begin on ~a" (line-num)))
+      (current-line (regexp-replace-pair (current-line) (highlighter-mlcb hl)))))
+
+  (when (multi-comment?)
+    (when (regexp-contains? (car (highlighter-mlce hl)) (current-line))
+      (multi-comment? #f)
+      (displayln "Found the end of multi comment")
+      (current-line (regexp-replace-pair (current-line) (highlighter-mlce hl)))))
+
+  (line-num (add1 (line-num)))
+  (code-accum (string-append (code-accum) (current-line) "\n")))
 
 
 ; write code to the file from the accumulator
@@ -75,12 +105,12 @@
 ; Line read logic goes here
 ; Insert the line if it's a single-line-comment leaded string
 ; If it's a line of code, add it to the code accumulator
-(define (parse-line line output-port slc)
+(define (parse-line line hl output-port)
   (define sanitized-line (sanitize-line line))
   (define trimmed-line (trim-line sanitized-line))
-  (if (string-startswith? trimmed-line slc)
-      (write-comment-line (remove-comment trimmed-line slc) output-port)
-      (add-code sanitized-line output-port)))
+  (if (string-startswith? trimmed-line (highlighter-slc hl))
+      (write-comment-line (remove-comment trimmed-line (highlighter-slc hl)) output-port)
+      (add-code sanitized-line hl output-port)))
 
 
 ; build a parser using a syntax rules struct
@@ -90,12 +120,15 @@
   (define op (open-output-file
               (build-file-path (output-base-folder) filename) #:exists 'replace))
   
-  (write-lines-to-file op (generate-html-header filename base-css css-dark-theme ""))
-  
+  (write-lines-to-file
+   op
+   (generate-html-header
+    (get-file-from-path filename) base-css css-dark-theme ""))
+
   (define (parse-all-lines generator)
     (define line (generator))
     (unless (eof-object? line)
-      (parse-line line op (highlighter-slc syntaxer))
+      (parse-line line syntaxer op)
       (parse-all-lines generator)))
   
   (parse-all-lines fr)

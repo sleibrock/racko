@@ -19,8 +19,8 @@ Racko supported languages and other data in here
 (define racket-syntax
   (highlighter
    ";"
-   "#|"
-   "|#"
+   '(#rx"#\\|" "<span class=\"comment\">#|")
+   '(#rx"\\|#" "|#</span>")
    '("define" "lambda" "λ" "struct" "require" "module" "module+")
    '("let" "let*" "letrec" "if" "cond" "when" "unless" "for" "for-each" "map"
            "filter" "length" "null" "andmap" "ormap" "foldl" "foldr" "empty"
@@ -35,8 +35,8 @@ Racko supported languages and other data in here
 (define cpp-syntax
   (highlighter 
    "//"
-   "/*"
-   "*/"
+   '(#rx"/\\*" "<span class='comment'>/*")
+   '(#rx"\\*/" "*/</span>")
    '("#define" "#ifdef" "#ifndef" "#endif" "#pragma" "typedef" "struct"
                "namespace" "typename" "class" "public" "private" "protected"
                "void" "short" "long" "unsigned" "int" "char" "bool" "double"
@@ -90,8 +90,8 @@ Racko supported languages and other data in here
 (define go-syntax
   (highlighter
    "//"
-   "/*"
-   "*/"
+   '(#rx"/\\*" "<span class='comment'>/*")
+   '(#rx"\\*/" "*/</span>")
    '("package" "import" "var" "type" "struct")
    '("bool" "int" "string" "uint" "uint64" "float64" "complex128")
    '("const" "func")
