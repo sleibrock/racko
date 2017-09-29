@@ -50,6 +50,16 @@ not quite there yet.
               (string-append (path->string fname) ".html")))
 
 
+; Replace all keywords in a line with a keyword list
+; The group-func is the syntax group the keylist belongs to
+(define (replace-keyword keylist group-func)
+  (for-each
+   (λ (keyword)
+     (current-line
+      (regexp-replace keyword (current-line) (group-func keyword))))
+   keylist))
+
+
 ; add code to the code accumulator
 (define (add-code line hl output)
   (current-line line)
@@ -73,6 +83,9 @@ not quite there yet.
       (multi-comment? #f)
       (displayln "Found the end of multi comment")
       (current-line (regexp-replace-pair (current-line) (highlighter-mlce hl)))))
+
+  (unless (multi-comment?)
+    (replace-keyword (highlighter-group hl) phrase1))
 
   (line-num (add1 (line-num)))
   (code-accum (string-append (code-accum) (current-line) "\n")))

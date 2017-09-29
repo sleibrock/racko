@@ -3,6 +3,11 @@
 #|
 Racko supported languages and other data in here
 
+The lexer has to be improved upon because multiple groups will overlap
+and cause coloring issues when smaller words are found in larger words.
+Either keep it simple keywords, or come up with a new lexer idea that
+works in most (if not all) cases and is easy to use to parse other
+languages and color them accordingly.
 |#
 
 (provide all-languages
@@ -10,7 +15,7 @@ Racko supported languages and other data in here
          (struct-out highlighter))
 
 
-(struct highlighter (slc mlcb mlce group1 group2 group3))
+(struct highlighter (slc mlcb mlce group))
 
 
 ; Define the Racket syntax keywords
@@ -21,31 +26,24 @@ Racko supported languages and other data in here
    ";"
    '(#rx"#\\|" "<span class=\"comment\">#|")
    '(#rx"\\|#" "|#</span>")
-   '("define" "lambda" "λ" "struct" "require" "module" "module+")
-   '("let" "let*" "letrec" "if" "cond" "when" "unless" "for" "for-each" "map"
-           "filter" "length" "null" "andmap" "ormap" "foldl" "foldr" "empty"
-           "take" "drop" "split-at" "apply" "range")
-   '("#f" "#t" "car" "cdr" "first" "second" "third" "fourth" "fifth" "sixth"
-          "seventh" "eight" "ninth" "tenth" "cadr" "caddr" "cadddr" "caddddr")))
+   '("define" "lambda" "λ" "struct" "require" "module" "module+" "provide" "submod"
+              "when" "unless" "if" "cond" "begin" "begin0" "apply" "let")
+   ))
 
 
 ; C++ syntax highlighter, works for both C/C++
 ; Macros/datatype expressions are different from logical keywords
 ; Things like return/break should be colored different from logical
 (define cpp-syntax
-  (highlighter 
+  (highlighter
    "//"
-   '(#rx"/\\*" "<span class='comment'>/*")
+   '(#rx"/\\*" "<span class=\"comment\">/*")
    '(#rx"\\*/" "*/</span>")
-   '("#define" "#ifdef" "#ifndef" "#endif" "#pragma" "typedef" "struct"
-               "namespace" "typename" "class" "public" "private" "protected"
-               "void" "short" "long" "unsigned" "int" "char" "bool" "double"
-               "float" "new" "enum" "true" "false" "static" "extern" "const"
-               "union" "this" "uint32_t" "uint16_t" "uint8_t" "char16_t"
-               "char32_t" "register" "inline" "decltype" "constexpr" "friend"
-               "auto" "delete" "unique_ptr" "shared_ptr")
-   '("if" "switch" "case" "else" "do" "while" "for" "asm" "operator")
-   '("return" "break" "continue" "goto" "NULL" "M_PI")))
+   '(
+     "#define" "#ifdef" "#ifndef" "#endif" "#pragma" "#include" "#else"
+     "typedef" "struct" "namespace" "typename" "public" "private" "protected"
+     "return" "operator" "friend" "union" "auto" "delete" "unique_ptr" "shared_ptr")
+   ))
 
 ; Python highlighter
 ; Python 2 and 3 have a few different differences in std namespace funcs
@@ -54,12 +52,8 @@ Racko supported languages and other data in here
    "#"
    "\"\"\""
    "\"\"\""
-   '("from" "import" "this" "eval" "help" "dir" "exec" "super")
-   '("int" "float" "bool" "set" "frozenset" "dict" "list" "tuple" "object"
-           "bytes" "str" "globals" "locals" "memoryview" "iter" "complex"
-           "Exception" "IOError" "KeyboardInterrupt" "BaseException"
-           "EOFError" )
-   '("if" "else" "elif" "while" "for" "map" "filter" "lambda" "return")))
+   '("from" "import" "this" "super" "return" "def")
+   ))
 
 ; Ruby highlighter
 ; Add more syntax later
@@ -69,8 +63,7 @@ Racko supported languages and other data in here
    "=begin"
    "=end"
    '("class")
-   '("puts")
-   '("if" "end" "def")))
+   ))
 
 ; Haskell highlighter
 ; More to come
@@ -79,9 +72,7 @@ Racko supported languages and other data in here
    "--"
    "{-|"
    "|-}"
-   '("import" "qualified")
-   '("Int" "Bool" "Num" "Eq" "Ord")
-   '()
+   '("import" "qualified" "Num")
    ))
 
 
@@ -92,9 +83,8 @@ Racko supported languages and other data in here
    "//"
    '(#rx"/\\*" "<span class='comment'>/*")
    '(#rx"\\*/" "*/</span>")
-   '("package" "import" "var" "type" "struct")
-   '("bool" "int" "string" "uint" "uint64" "float64" "complex128")
-   '("const" "func")
+   '("package" "import" "var" "type" "struct" "func" "return" "defer"
+               "switch" "case")
    ))
 
 ; Rust highlighter
@@ -105,8 +95,7 @@ Racko supported languages and other data in here
    "/*"
    "*/"
    '("use" "crate" "pub" "mod" "type")
-   '("i32" "i64" "u32" "u64" "bool" "f32" "f64")
-   '("if" "else" "return" "loop" "match" "impl" "trait")))
+   ))
 
 ; Define the language list to use in the main program
 ; Use this as the lookup to determine if a given source file

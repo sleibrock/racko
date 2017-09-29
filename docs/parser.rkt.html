@@ -97,6 +97,18 @@ color: #eee;
   color: green;
 }
 
+.syntax1 {
+color: orange;
+}
+
+.syntax2 {
+color: blue;
+}
+
+.syntax3 {
+color: red;
+}
+
 </style>
 <script>
 
@@ -119,16 +131,20 @@ parser.rkt
 The main parsing logic program
 
 Contains all logic and functions related to HTML
-annotation file creation
+annotation file creation.
+
+The program relies heavily on parameters for the
+time being. Threading this program safely is
+not quite there yet.
 |#</span>
 
-(require racket/string
+(<span class="syntax1">require</span> racket/string
          racket/cmdline
          "utils.rkt"
          "languages.rkt"
          "html.rkt")
 
-(provide main)
+(<span class="syntax1">provide</span> main)
 
 
 
@@ -138,9 +154,9 @@ annotation file creation
 Program constants
 </p>
 </div><div class='content'><pre>
-(define PROGRAM-NAME     "raco annotate")
-(define JS-FILENAME          "script.js")
-(define CSS-FILENAME         "style.css")
+(<span class="syntax1">define</span> PROGRAM-NAME     "raco annotate")
+(<span class="syntax1">define</span> JS-FILENAME          "script.js")
+(<span class="syntax1">define</span> CSS-FILENAME         "style.css")
 
 
 </pre></div></li>
@@ -149,9 +165,9 @@ Program constants
 Program command line options
 </p>
 </div><div class='content'><pre>
-(define inline-cssjs         (make-parameter           #f))
-(define verbosity-mode       (make-parameter           #f))
-(define output-base-folder   (make-parameter       "docs"))
+(<span class="syntax1">define</span> inline-cssjs         (make-parameter           #f))
+(<span class="syntax1">define</span> verbosity-mode       (make-parameter           #f))
+(<span class="syntax1">define</span> output-base-folder   (make-parameter       "docs"))
 
 
 </pre></div></li>
@@ -160,15 +176,15 @@ Program command line options
 parser parameters for rendering html and other things
 </p>
 </div><div class='content'><pre>
-(define section-number       (make-parameter            0))
-(define code-accum           (make-parameter           ""))
-(define inside-section?      (make-parameter           #f))
-(define inside-annotation?   (make-parameter           #f))
-(define multi-comment?       (make-parameter           #f))
-(define file-title-name      (make-parameter  "file.html"))
+(<span class="syntax1">define</span> section-number       (make-parameter            0))
+(<span class="syntax1">define</span> code-accum           (make-parameter           ""))
+(<span class="syntax1">define</span> inside-section?      (make-parameter           #f))
+(<span class="syntax1">define</span> inside-annotation?   (make-parameter           #f))
+(<span class="syntax1">define</span> multi-comment?       (make-parameter           #f))
+(<span class="syntax1">define</span> file-title-name      (make-parameter  "file.html"))
 
-(define line-num             (make-parameter            1))
-(define current-line         (make-parameter           ""))
+(<span class="syntax1">define</span> line-num             (make-parameter            1))
+(<span class="syntax1">define</span> current-line         (make-parameter           ""))
 
 
 
@@ -178,8 +194,8 @@ parser parameters for rendering html and other things
 return a path based on the target folder and filename
 </p>
 </div><div class='content'><pre>
-(define (build-file-path output filename)
-  (define-values (dir fname d?) (split-path filename))
+(<span class="syntax1">define</span> (build-file-path output filename)
+  (<span class="syntax1">define</span>-values (dir fname d?) (split-path filename))
   (build-path (current-directory)
               output
               (string-append (path-&gt;string fname) ".html")))
@@ -189,31 +205,52 @@ return a path based on the target folder and filename
 </pre></div></li>
 <li><div class='annotation'>
 <p>
+Replace all keywords in a line with a keyword list
+</p>
+<p>
+The group-func is the syntax group the keylist belongs to
+</p>
+</div><div class='content'><pre>
+(<span class="syntax1">define</span> (replace-keyword keylist group-func)
+  (for-each
+   (<span class="syntax1">λ</span> (keyword)
+     (current-line
+      (regexp-replace keyword (current-line) (group-func keyword))))
+   keylist))
+
+
+
+</pre></div></li>
+<li><div class='annotation'>
+<p>
 add code to the code accumulator
 </p>
 </div><div class='content'><pre>
-(define (add-code line hl output)
+(<span class="syntax1">define</span> (add-code line hl output)
   (current-line line)
   
-  (unless (inside-section?)
+  (<span class="syntax1">unless</span> (inside-section?)
     (inside-section? #t)
     (displayln "&lt;li&gt;&lt;div class='annotation'&gt;&lt;/div&gt;&lt;div class='content'&gt;&lt;pre&gt;" output))
 
-  (when (inside-annotation?)
+  (<span class="syntax1">when</span> (inside-annotation?)
     (displayln "&lt;/div&gt;&lt;div class='content'&gt;&lt;pre&gt;" output)
     (inside-annotation? #f))
 
-  (unless (multi-comment?)
-    (when (regexp-contains? (car (highlighter-mlcb hl)) (current-line))
+  (<span class="syntax1">unless</span> (multi-comment?)
+    (<span class="syntax1">when</span> (regexp-contains? (car (highlighter-mlcb hl)) (current-line))
       (multi-comment? #t)
-      (displayln (format "Found a multi line comment begin on ~a" (line-num)))
+      (displayln (format "Found a multi line comment <span class="syntax1">begin</span> on ~a" (line-num)))
       (current-line (regexp-replace-pair (current-line) (highlighter-mlcb hl)))))
 
-  (when (multi-comment?)
-    (when (regexp-contains? (car (highlighter-mlce hl)) (current-line))
+  (<span class="syntax1">when</span> (multi-comment?)
+    (<span class="syntax1">when</span> (regexp-contains? (car (highlighter-mlce hl)) (current-line))
       (multi-comment? #f)
       (displayln "Found the end of multi comment")
       (current-line (regexp-replace-pair (current-line) (highlighter-mlce hl)))))
+
+  (<span class="syntax1">unless</span> (multi-comment?)
+    (replace-keyword (highlighter-group hl) phrase1))
 
   (line-num (add1 (line-num)))
   (code-accum (string-append (code-accum) (current-line) "\n")))
@@ -226,8 +263,8 @@ add code to the code accumulator
 write code to the file from the accumulator
 </p>
 </div><div class='content'><pre>
-(define (write-code output)
-  (unless (string=? "" (code-accum))
+(<span class="syntax1">define</span> (write-code output)
+  (<span class="syntax1">unless</span> (string=? "" (code-accum))
     (displayln (code-accum) output)
     (code-accum "")
     (displayln "&lt;/pre&gt;&lt;/div&gt;&lt;/li&gt;" output)
@@ -241,11 +278,11 @@ write code to the file from the accumulator
 writing code lines goes here
 </p>
 </div><div class='content'><pre>
-(define (write-comment-line line output)
+(<span class="syntax1">define</span> (write-comment-line line output)
 
   (write-code output) ; flush any code and close a section
 
-  (unless (inside-section?)
+  (<span class="syntax1">unless</span> (inside-section?)
     (inside-section? #t)
     (inside-annotation? #t)
     (displayln "&lt;li&gt;&lt;div class='annotation'&gt;" output))
@@ -268,10 +305,10 @@ Insert the line if it's a single-line-comment leaded string
 If it's a line of code, add it to the code accumulator
 </p>
 </div><div class='content'><pre>
-(define (parse-line line hl output-port)
-  (define sanitized-line (sanitize-line line))
-  (define trimmed-line (trim-line sanitized-line))
-  (if (string-startswith? trimmed-line (highlighter-slc hl))
+(<span class="syntax1">define</span> (parse-line line hl output-port)
+  (<span class="syntax1">define</span> sanitized-line (sanitize-line line))
+  (<span class="syntax1">define</span> trimmed-line (trim-line sanitized-line))
+  (<span class="syntax1">if</span> (string-startswith? trimmed-line (highlighter-slc hl))
       (write-comment-line (remove-comment trimmed-line (highlighter-slc hl)) output-port)
       (add-code sanitized-line hl output-port)))
 
@@ -283,10 +320,10 @@ If it's a line of code, add it to the code accumulator
 build a parser using a syntax rules struct
 </p>
 </div><div class='content'><pre>
-(define (parse-file filename syntaxer)
+(<span class="syntax1">define</span> (parse-file filename syntaxer)
   
-  (define fr (file-reader (string-&gt;path filename)))
-  (define op (open-output-file
+  (<span class="syntax1">define</span> fr (file-reader (string-&gt;path filename)))
+  (<span class="syntax1">define</span> op (open-output-file
               (build-file-path (output-base-folder) filename) #:exists 'replace))
   
   (write-lines-to-file
@@ -294,9 +331,9 @@ build a parser using a syntax rules struct
    (generate-html-header
     (get-file-from-path filename) base-css css-dark-theme ""))
 
-  (define (parse-all-lines generator)
-    (define line (generator))
-    (unless (eof-object? line)
+  (<span class="syntax1">define</span> (parse-all-lines generator)
+    (<span class="syntax1">define</span> line (generator))
+    (<span class="syntax1">unless</span> (eof-object? line)
       (parse-line line syntaxer op)
       (parse-all-lines generator)))
   
@@ -319,18 +356,18 @@ Create a new file and find it's highlighter
 If no highlighter exists, quit the program
 </p>
 </div><div class='content'><pre>
-(define (create-docs filename)
-  (define extension (get-extension filename))
+(<span class="syntax1">define</span> (create-docs filename)
+  (<span class="syntax1">define</span> extension (get-extension filename))
   
-  (unless (hash-has-key? all-languages (get-extension filename))
+  (<span class="syntax1">unless</span> (hash-has-key? all-languages (get-extension filename))
     (displayln "Not supported!")
     (exit 0))
 
-  (define selected (car (hash-ref all-languages extension)))
-  (define lang     (car selected))
-  (define syntaxer (car (cdr selected)))
+  (<span class="syntax1">define</span> selected (car (hash-ref all-languages extension)))
+  (<span class="syntax1">define</span> lang     (car selected))
+  (<span class="syntax1">define</span> syntaxer (car (cdr selected)))
 
-  (when (verbosity-mode)
+  (<span class="syntax1">when</span> (verbosity-mode)
     (displayln (format "File given: ~a"    filename))
     (displayln (format "Extension: ~a"     extension))
     (displayln (format "Output folder: ~a" (output-base-folder)))
@@ -340,7 +377,7 @@ If no highlighter exists, quit the program
   (displayln "Done"))
 
 
-(define (main)
+(<span class="syntax1">define</span> (main)
   (command-line
    #:program PROGRAM-NAME
    #:once-each

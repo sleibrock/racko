@@ -47,7 +47,6 @@ Contains:
 (define (write-lines-to-file output-port lines)
   (for-each (λ (l) (displayln l output-port)) lines))
 
-
 ; Trim a line so there's no whitespace at the left side
 (define (trim-line line)
   (string-trim line " " #:repeat? #t #:right? #f))

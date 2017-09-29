@@ -2,10 +2,21 @@
 
 (require "utils.rkt")
 
-(provide generate-html-header
+(provide phrase1
+         phrase2
+         phrase3
+         generate-html-header
          generate-html-footer
          base-css
          css-dark-theme)
+
+(define (gen-syntax-tag cls)
+  (λ (phrase)
+    (string-append "<span class=\"" cls "\">" phrase "</span>")))
+
+(define phrase1 (gen-syntax-tag "syntax1"))
+(define phrase2 (gen-syntax-tag "syntax2"))
+(define phrase3 (gen-syntax-tag "syntax3"))
 
 (define (generate-html-header filename style theme js)
   (list "<!doctype html>"
@@ -139,5 +150,17 @@ color: #eee;
 
 .comment {
   color: green;
+}
+
+.syntax1 {
+color: orange;
+}
+
+.syntax2 {
+color: blue;
+}
+
+.syntax3 {
+color: red;
 }
 ")
